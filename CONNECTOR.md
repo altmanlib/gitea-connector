@@ -83,6 +83,32 @@ GITEA_BASE_URL=https://git.example.com python3 ~/workspace/custom-connectors/cus
 
 - GET is verified through the commands above. Other methods are untested, so read the state back after any write to confirm what happened.
 
+## Call through the official MCP server
+
+- The connector also wraps the official Gitea MCP server from gitea.com/gitea/gitea-mcp, pinned at v1.11.0. Download the binary from its releases page, verify it against the release checksums file and point `GITEA_MCP_BIN` at it.
+
+- The client is `bin/gitea_mcp_client.py` in this repository layout, with `list-tools` and `call-tool` commands. It starts the server over stdio for one invocation and exits, so nothing stays resident.
+
+- The server sends its token in an Authorization header, but the surrogate is only swapped at the registered placement, the `access_token` query parameter. The client therefore runs a loopback proxy. The server connects to the proxy with a placeholder token, the proxy strips that header and forwards each request with the surrogate in the query parameter, and the swap happens on that final hop.
+
+- List every tool the server offers:
+
+```text
+GITEA_BASE_URL=https://git.example.com python3 bin/gitea_mcp_client.py list-tools
+```
+
+- Call one tool with its arguments as a JSON object in a file:
+
+```text
+GITEA_BASE_URL=https://git.example.com python3 bin/gitea_mcp_client.py call-tool --name get_me --arguments-file <path-to-json>
+```
+
+- The client has an allowlist. It holds the read-only tools of server v1.11.0, 35 of them, and blocks every write tool until that operation is reviewed on its own.
+
+- Verified on 2026-10-23 against a real instance. The calls get_gitea_mcp_server_version, get_me and list_my_repos all returned the expected data, and get_me proves the proxied authentication works.
+
+- Server v1.11.0 offers 61 tools. Always read the current list with list-tools instead of trusting a remembered tool name.
+
 ## Recover from errors
 
 - A 403 with the message Only signed in user is allowed to call APIs means the request carried no usable credential and Gitea treated it as anonymous. Check the placement and the registered host first.
