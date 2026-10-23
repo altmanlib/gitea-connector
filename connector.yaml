@@ -1,0 +1,6 @@
+id: "custom.gitea"
+title: "Gitea"
+description: "Use a self-hosted Gitea instance through its REST API."
+aliases: ["Gitea"]
+include_in_prompt: true
+require_auth: true
